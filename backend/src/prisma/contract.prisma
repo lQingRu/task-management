@@ -1,0 +1,94 @@
+enum TaskStatus {
+  TODO
+  DONE
+}
+
+model Developer {
+  id   String @id @default(uuid())
+  name String
+
+  skills DeveloperSkill[]
+  tasks  Task[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt temporal.updatedAt() @map("updated_at")
+}
+
+model Skill {
+  id   String @id @default(uuid())
+  name String @unique
+
+  developers DeveloperSkill[]
+  tasks      TaskSkill[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt temporal.updatedAt() @map("updated_at")
+}
+
+model DeveloperSkill {
+  developerId String @map("developer_id")
+  skillId     String @map("skill_id")
+
+  developer Developer @relation(
+    fields: [developerId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  skill Skill @relation(
+    fields: [skillId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@id([developerId, skillId])
+  @@map("developer_skill")
+}
+
+model Task {
+  id     String     @id @default(uuid())
+  title  String
+  status TaskStatus @default(TODO)
+
+  assigneeId String? @map("assignee_id")
+  assignee   Developer? @relation(
+    fields: [assigneeId],
+    references: [id],
+    onDelete: SetNull
+  )
+
+  parentId String? @map("parent_id")
+  parent   Task? @relation(
+    "TaskSubtasks",
+    fields: [parentId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  subtasks Task[] @relation("TaskSubtasks")
+
+  skills TaskSkill[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt temporal.updatedAt() @map("updated_at")
+}
+
+model TaskSkill {
+  taskId  String @map("task_id")
+  skillId String @map("skill_id")
+
+  task Task @relation(
+    fields: [taskId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  skill Skill @relation(
+    fields: [skillId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@id([taskId, skillId])
+  @@map("task_skill")
+}
