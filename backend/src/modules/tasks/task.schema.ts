@@ -9,20 +9,35 @@ export const createTaskBodySchema = z.object({
   parentId: z.uuid().nullable().optional(),
 });
 
-const taskAssigneeSchema = z.object({
+export const taskAssigneeSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
 });
 
-export const createdTaskResponseSchema = z.object({
-  id: z.uuid(),
-  title: z.string().min(1),
-  status: z.enum(["TODO", "IN_PROGRESS", "DONE"]),
-  skills: z.array(skillSchema),
-  assignee: taskAssigneeSchema.nullable(),
-  parentId: z.uuid().nullable(),
-  subtasks: z.tuple([]),
-});
+export interface TaskResponse {
+  id: string;
+  title: string;
+  status: "TODO" | "IN_PROGRESS" | "DONE";
+  skills: Array<z.infer<typeof skillSchema>>;
+  assignee: z.infer<typeof taskAssigneeSchema> | null;
+  parentId: string | null;
+  subtasks: TaskResponse[];
+}
+
+export const taskResponseSchema: z.ZodType<TaskResponse> = z.lazy(() =>
+  z.object({
+    id: z.uuid(),
+    title: z.string().min(1),
+    status: z.enum(["TODO", "IN_PROGRESS", "DONE"]),
+    skills: z.array(skillSchema),
+    assignee: taskAssigneeSchema.nullable(),
+    parentId: z.uuid().nullable(),
+    subtasks: z.array(taskResponseSchema),
+  }),
+);
+
+export const createdTaskResponseSchema = taskResponseSchema;
+export const tasksResponseSchema = z.array(taskResponseSchema);
 
 export const taskErrorResponseSchema = z.object({
   code: z.string(),
@@ -30,4 +45,4 @@ export const taskErrorResponseSchema = z.object({
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskBodySchema>;
-export type CreatedTaskResponse = z.infer<typeof createdTaskResponseSchema>;
+export type CreatedTaskResponse = TaskResponse;

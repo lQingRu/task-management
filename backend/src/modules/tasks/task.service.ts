@@ -1,4 +1,8 @@
-import type { CreateTaskInput, CreatedTaskResponse } from "./task.schema.js";
+import type {
+  CreateTaskInput,
+  CreatedTaskResponse,
+  TaskResponse,
+} from "./task.schema.js";
 import { taskRepository, type TaskRepository } from "./task.repository.js";
 
 export type TaskCreationErrorCode =
@@ -93,4 +97,55 @@ export async function createTask(
     parentId: task.parentId,
     subtasks: [],
   };
+}
+
+export async function getTasks(
+  repository: TaskRepository = taskRepository,
+): Promise<TaskResponse[]> {
+  const records = await repository.findAll();
+  const tasksById = new Map<string, TaskResponse>();
+
+  for (const record of records) {
+    const skills = record.skills.map(({ skill }) => {
+      if (skill === null) {
+        throw new Error(`Task ${record.id} has an invalid skill relation`);
+      }
+
+      return skill;
+    });
+
+    skills.sort((left, right) => left.name.localeCompare(right.name));
+
+    tasksById.set(record.id, {
+      id: record.id,
+      title: record.title,
+      status: record.status,
+      skills,
+      assignee: record.assignee,
+      parentId: record.parentId,
+      subtasks: [],
+    });
+  }
+
+  const rootTasks: TaskResponse[] = [];
+
+  for (const record of records) {
+    const task = tasksById.get(record.id)!;
+
+    if (record.parentId === null) {
+      rootTasks.push(task);
+      continue;
+    }
+
+    const parent = tasksById.get(record.parentId);
+    if (!parent) {
+      throw new Error(
+        `Task ${record.id} references missing parent ${record.parentId}`,
+      );
+    }
+
+    parent.subtasks.push(task);
+  }
+
+  return rootTasks;
 }

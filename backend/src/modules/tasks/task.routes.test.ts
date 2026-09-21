@@ -82,3 +82,49 @@ describe("POST /v1/tasks", () => {
     });
   });
 });
+
+describe("GET /v1/tasks", () => {
+  it("returns the task hierarchy", async () => {
+    const childId = "33333333-3333-4333-8333-333333333333";
+    const getTasks = vi.fn().mockResolvedValue([
+      {
+        id: taskId,
+        title: "Build the API",
+        status: "TODO",
+        skills: [{ id: skillId, name: "Backend" }],
+        assignee: null,
+        parentId: null,
+        subtasks: [
+          {
+            id: childId,
+            title: "Write tests",
+            status: "DONE",
+            skills: [],
+            assignee: null,
+            parentId: taskId,
+            subtasks: [],
+          },
+        ],
+      },
+    ]);
+    const app = buildApp({ logger: false, services: { getTasks } });
+
+    const response = await app.inject({ method: "GET", url: "/v1/tasks" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(await getTasks.mock.results[0]?.value);
+    expect(getTasks).toHaveBeenCalledOnce();
+  });
+
+  it("returns an empty list when no tasks exist", async () => {
+    const app = buildApp({
+      logger: false,
+      services: { getTasks: async () => [] },
+    });
+
+    const response = await app.inject({ method: "GET", url: "/v1/tasks" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([]);
+  });
+});

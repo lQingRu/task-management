@@ -5,17 +5,20 @@ import {
   createTaskBodySchema,
   createdTaskResponseSchema,
   taskErrorResponseSchema,
+  tasksResponseSchema,
   type CreateTaskInput,
   type CreatedTaskResponse,
 } from "./task.schema.js";
-import { createTask, TaskCreationError } from "./task.service.js";
+import { createTask, getTasks, TaskCreationError } from "./task.service.js";
 
 export type CreateTask = (
   input: CreateTaskInput,
 ) => Promise<CreatedTaskResponse>;
+export type GetTasks = () => Promise<CreatedTaskResponse[]>;
 
 interface TaskRoutesOptions {
   createTask?: CreateTask;
+  getTasks?: GetTasks;
 }
 
 export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (
@@ -23,6 +26,19 @@ export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (
   options,
 ) => {
   const create = options.createTask ?? createTask;
+  const loadTasks = options.getTasks ?? getTasks;
+
+  app.withTypeProvider<ZodTypeProvider>().get(
+    "/v1/tasks",
+    {
+      schema: {
+        response: {
+          200: tasksResponseSchema,
+        },
+      },
+    },
+    async () => loadTasks(),
+  );
 
   app.withTypeProvider<ZodTypeProvider>().post(
     "/v1/tasks",

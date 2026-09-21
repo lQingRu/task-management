@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { TaskRepository } from "./task.repository.js";
-import { createTask } from "./task.service.js";
+import { createTask, getTasks } from "./task.service.js";
 
 const taskId = "11111111-1111-4111-8111-111111111111";
 const backendSkillId = "22222222-2222-4222-8222-222222222222";
@@ -22,6 +22,7 @@ function createRepository(
       status: "TODO",
       parentId: null,
     }),
+    findAll: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
@@ -148,5 +149,80 @@ describe("createTask", () => {
       statusCode: 422,
     });
     expect(repository.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("getTasks", () => {
+  it("returns root tasks with nested subtasks", async () => {
+    const childId = "66666666-6666-4666-8666-666666666666";
+    const repository = createRepository({
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: taskId,
+          title: "Build the API",
+          status: "TODO",
+          parentId: null,
+          assignee: {
+            id: developerId,
+            name: "Carol",
+          },
+          skills: [
+            {
+              skill: {
+                id: frontendSkillId,
+                name: "Frontend",
+              },
+            },
+            {
+              skill: {
+                id: backendSkillId,
+                name: "Backend",
+              },
+            },
+          ],
+        },
+        {
+          id: childId,
+          title: "Write tests",
+          status: "DONE",
+          parentId: taskId,
+          assignee: null,
+          skills: [],
+        },
+      ]),
+    });
+
+    const tasks = await getTasks(repository);
+
+    expect(tasks).toEqual([
+      {
+        id: taskId,
+        title: "Build the API",
+        status: "TODO",
+        parentId: null,
+        assignee: { id: developerId, name: "Carol" },
+        skills: [
+          { id: backendSkillId, name: "Backend" },
+          { id: frontendSkillId, name: "Frontend" },
+        ],
+        subtasks: [
+          {
+            id: childId,
+            title: "Write tests",
+            status: "DONE",
+            parentId: taskId,
+            assignee: null,
+            skills: [],
+            subtasks: [],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("returns an empty list when no tasks exist", async () => {
+    const tasks = await getTasks(createRepository());
+
+    expect(tasks).toEqual([]);
   });
 });

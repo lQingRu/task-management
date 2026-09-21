@@ -25,11 +25,22 @@ export interface CreatedTaskRecord {
   parentId: string | null;
 }
 
+export interface TaskRecord extends CreatedTaskRecord {
+  assignee: {
+    id: string;
+    name: string;
+  } | null;
+  skills: Array<{
+    skill: SkillRecord | null;
+  }>;
+}
+
 export interface TaskRepository {
   findSkillsByIds(skillIds: string[]): Promise<SkillRecord[]>;
   findDeveloperById(developerId: string): Promise<DeveloperRecord | null>;
   taskExists(taskId: string): Promise<boolean>;
   create(input: NewTaskRecord): Promise<CreatedTaskRecord>;
+  findAll(): Promise<TaskRecord[]>;
 }
 
 export const taskRepository: TaskRepository = {
@@ -82,5 +93,15 @@ export const taskRepository: TaskRepository = {
 
       return task;
     });
+  },
+
+  async findAll() {
+    return db.orm.public.Task.select("id", "title", "status", "parentId")
+      .include("assignee", (assignee) => assignee.select("id", "name"))
+      .include("skills", (taskSkills) =>
+        taskSkills.include("skill", (skill) => skill.select("id", "name")),
+      )
+      .orderBy((task) => task.createdAt.asc())
+      .all();
   },
 };

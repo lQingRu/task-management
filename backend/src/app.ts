@@ -10,12 +10,17 @@ import {
   type GetDevelopers,
 } from "./modules/developers/developer.routes.js";
 import { skillRoutes, type GetSkills } from "./modules/skills/skill.routes.js";
-import { taskRoutes, type CreateTask } from "./modules/tasks/task.routes.js";
+import {
+  taskRoutes,
+  type CreateTask,
+  type GetTasks,
+} from "./modules/tasks/task.routes.js";
 
 interface AppServices {
   getDevelopers?: GetDevelopers;
   getSkills?: GetSkills;
   createTask?: CreateTask;
+  getTasks?: GetTasks;
 }
 
 interface BuildAppOptions {
@@ -49,6 +54,7 @@ export function buildApp(options: BuildAppOptions = {}) {
   });
   app.register(taskRoutes, {
     createTask: options.services?.createTask,
+    getTasks: options.services?.getTasks,
   });
 
   return app;
