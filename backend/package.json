@@ -7,19 +7,27 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma skills sync || exit 0",
+    "contract:emit": "prisma contract emit",
+    "db:seed": "tsx src/prisma/seed.ts"
   },
   "keywords": [],
   "type": "module",
   "dependencies": {
     "@fastify/cors": "^11.3.0",
+    "@js-temporal/polyfill": "^0.5.1",
+    "@prisma/orm-postgres": "^8.0.0-rc.11",
+    "dotenv": "^18.0.1",
     "fastify": "^5.12.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@prisma/cli-engine": "^0.4.0",
     "@types/node": "^26.6.2",
     "eslint": "^10.11.0",
     "prettier": "^3.9.8",
+    "prisma": "^8.0.0-rc.15",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
