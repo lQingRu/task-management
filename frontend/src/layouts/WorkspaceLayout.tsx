@@ -2,11 +2,19 @@ import type { ReactNode } from 'react';
 import { AppShell, Button, Group, Text } from '@mantine/core';
 import { IconLayoutList, IconPlus } from '@tabler/icons-react';
 
+export type WorkspacePage = 'tasks' | 'create-task';
+
 interface WorkspaceLayoutProps {
+  activePage: WorkspacePage;
+  onNavigate: (page: WorkspacePage) => void;
   children: ReactNode;
 }
 
-export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
+export function WorkspaceLayout({
+  activePage,
+  onNavigate,
+  children,
+}: WorkspaceLayoutProps) {
   return (
     <AppShell
       header={{ height: 64 }}
@@ -27,6 +35,8 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
           <Text fw={600}>Task workspace</Text>
 
+          <span className='header-divider' />
+
           <Text size='sm' c='dimmed'>
             Assessment
           </Text>
@@ -37,26 +47,34 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
         <Text className='navigation-label'>WORKSPACE</Text>
 
         <Button
-          variant='subtle'
-          color='gray'
+          variant={activePage === 'tasks' ? 'light' : 'subtle'}
+          color={activePage === 'tasks' ? 'blue' : 'gray'}
           justify='flex-start'
           leftSection={<IconLayoutList size={18} />}
-          disabled
+          onClick={() => onNavigate('tasks')}
         >
           Tasks
         </Button>
 
         <Button
-          variant='light'
+          variant={activePage === 'create-task' ? 'light' : 'subtle'}
+          color={activePage === 'create-task' ? 'blue' : 'gray'}
           justify='flex-start'
           leftSection={<IconPlus size={18} />}
+          onClick={() => onNavigate('create-task')}
         >
           Create task
         </Button>
 
-        <Text size='xs' c='dimmed' mt='auto' p='sm'>
-          Additional workspace pages can use this navigation later.
-        </Text>
+        <div className='navigation-footer'>
+          <Text size='xs' c='dimmed'>
+            LOCAL DEMO
+          </Text>
+
+          <Text size='xs' c='dimmed' mt='xs'>
+            Changes stay in this browser. Skill identification is simulated.
+          </Text>
+        </div>
       </AppShell.Navbar>
 
       <AppShell.Main>

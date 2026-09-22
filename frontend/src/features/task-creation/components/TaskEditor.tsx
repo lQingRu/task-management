@@ -11,12 +11,12 @@ import {
 } from '@mantine/core';
 import { IconCornerDownRight, IconPlus, IconTrash } from '@tabler/icons-react';
 
+import { SKILLS, type Skill } from '../../../domain/task.js';
+
 import {
   createEmptyTaskDraft,
-  SKILLS,
-  type Skill,
   type TaskDraft,
-} from '../model/taskDraft';
+} from '../../task-creation/model/taskDraft.js';
 
 interface TaskEditorProps {
   task: TaskDraft;

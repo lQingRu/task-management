@@ -1,6 +1,4 @@
-export const SKILLS = ['Frontend', 'Backend'] as const;
-
-export type Skill = (typeof SKILLS)[number];
+import type { Skill } from '../../../domain/task';
 
 export interface TaskDraft {
   clientId: string;

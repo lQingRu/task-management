@@ -109,3 +109,139 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.header-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--mantine-color-gray-3);
+}
+
+.navigation-footer {
+  margin-top: auto;
+  padding: 48px 12px 8px;
+}
+
+.task-list-heading {
+  gap: 24px;
+}
+
+.task-summary {
+  display: flex;
+  margin-bottom: 24px;
+  padding: 16px 0;
+  overflow-x: auto;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.task-summary-item {
+  flex: 1 0 150px;
+  padding: 0 24px;
+  border-right: 1px solid var(--mantine-color-gray-2);
+}
+
+.task-summary-item:last-child {
+  border-right: 0;
+}
+
+.summary-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.summary-dot-gray {
+  background: var(--mantine-color-gray-5);
+}
+
+.summary-dot-blue {
+  background: var(--mantine-color-blue-6);
+}
+
+.summary-dot-green {
+  background: var(--mantine-color-green-6);
+}
+
+.task-list-panel {
+  overflow: hidden;
+  background: white;
+}
+
+.task-search {
+  flex: 0 0 400px;
+  width: 400px;
+  max-width: 100%;
+}
+
+.task-table {
+  table-layout: fixed;
+}
+
+.task-table thead {
+  color: var(--mantine-color-gray-7);
+  font-size: 12px;
+  background: var(--mantine-color-gray-0);
+}
+
+.task-table td {
+  border-color: var(--mantine-color-gray-2);
+}
+
+.nested-task-row {
+  background: #fcfcfd;
+}
+
+.task-tree-leaf {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 13px;
+  margin-top: 2px;
+  border-bottom: 1px solid var(--mantine-color-gray-4);
+  border-left: 1px solid var(--mantine-color-gray-4);
+}
+
+.task-table-footer {
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
+
+.task-status-done input {
+  color: var(--mantine-color-green-8);
+  background: var(--mantine-color-green-0);
+}
+
+.task-status-in-progress input {
+  color: var(--mantine-color-blue-8);
+  background: var(--mantine-color-blue-0);
+}
+
+@media (max-width: 62em) {
+  .task-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-search {
+    flex: 1;
+    min-width: 260px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 48em) {
+  .task-list-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .task-toolbar > .mantine-Group-root {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-toolbar .mantine-Select-root {
+    width: 100% !important;
+  }
+}
