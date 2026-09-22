@@ -40,6 +40,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 
   app.register(cors, {
     origin: true,
+    methods: ["GET", "HEAD", "POST", "PATCH", "OPTIONS"],
   });
 
   app.get("/health", async () => {
