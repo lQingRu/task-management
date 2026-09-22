@@ -1,15 +1,13 @@
-import type { Skill } from '../../../domain/task';
-
 export interface TaskDraft {
   clientId: string;
   title: string;
-  requiredSkills: Skill[];
+  skillIds: string[];
   subtasks: TaskDraft[];
 }
 
 export interface CreateTaskRequest {
   title: string;
-  requiredSkills: Skill[];
+  skillIds: string[];
   subtasks: CreateTaskRequest[];
 }
 
@@ -17,7 +15,7 @@ export function createEmptyTaskDraft(): TaskDraft {
   return {
     clientId: crypto.randomUUID(),
     title: '',
-    requiredSkills: [],
+    skillIds: [],
     subtasks: [],
   };
 }
@@ -35,7 +33,7 @@ export function countTasks(task: TaskDraft): number {
 export function toCreateTaskRequest(task: TaskDraft): CreateTaskRequest {
   return {
     title: task.title.trim(),
-    requiredSkills: task.requiredSkills,
+    skillIds: task.skillIds,
     subtasks: task.subtasks.map(toCreateTaskRequest),
   };
 }

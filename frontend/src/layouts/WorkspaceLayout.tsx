@@ -72,7 +72,7 @@ export function WorkspaceLayout({
           </Text>
 
           <Text size='xs' c='dimmed' mt='xs'>
-            Changes stay in this browser. Skill identification is simulated.
+            Changes are saved to the task service.
           </Text>
         </div>
       </AppShell.Navbar>

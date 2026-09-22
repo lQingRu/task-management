@@ -25,15 +25,15 @@ import {
 
 import {
   canMarkTaskDone,
-  DEVELOPERS,
   flattenTasks,
   getEligibleDevelopers,
   TASK_STATUSES,
   type Task,
+  type Developer,
   type TaskStatus,
   type TaskUpdate,
 } from '../../../domain/task';
-import { listTasks, updateTask } from '../services/taskListService';
+import { loadTaskList, updateTask } from '../services/taskListService';
 
 interface TaskListPageProps {
   onCreateTask: () => void;
@@ -47,6 +47,7 @@ interface VisibleTask {
 
 export function TaskListPage({ onCreateTask }: TaskListPageProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [developers, setDevelopers] = useState<Developer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,9 +62,15 @@ export function TaskListPage({ onCreateTask }: TaskListPageProps) {
       try {
         setLoading(true);
         setError(null);
-        setTasks(await listTasks());
-      } catch {
-        setError('Unable to load tasks.');
+        const data = await loadTaskList();
+        setTasks(data.tasks);
+        setDevelopers(data.developers);
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Unable to load tasks and developers.',
+        );
       } finally {
         setLoading(false);
       }
@@ -76,30 +83,27 @@ export function TaskListPage({ onCreateTask }: TaskListPageProps) {
 
   const filtering = Boolean(search || statusFilter || assigneeFilter);
 
-  function taskMatches(task: Task): boolean {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    const matchesSearch =
-      !normalizedSearch ||
-      `${task.id} ${task.title}`.toLowerCase().includes(normalizedSearch);
-
-    const matchesStatus = !statusFilter || task.status === statusFilter;
-
-    const matchesAssignee =
-      !assigneeFilter ||
-      (assigneeFilter === 'unassigned'
-        ? task.assigneeId === null
-        : task.assigneeId === assigneeFilter);
-
-    return matchesSearch && matchesStatus && matchesAssignee;
-  }
-
-  function branchMatches(task: Task): boolean {
-    return taskMatches(task) || task.subtasks.some(branchMatches);
-  }
-
   const visibleTasks = useMemo(() => {
     const result: VisibleTask[] = [];
+    const normalizedSearch = search.trim().toLowerCase();
+
+    function taskMatches(task: Task): boolean {
+      const matchesSearch =
+        !normalizedSearch ||
+        `${task.id} ${task.title}`.toLowerCase().includes(normalizedSearch);
+      const matchesStatus = !statusFilter || task.status === statusFilter;
+      const matchesAssignee =
+        !assigneeFilter ||
+        (assigneeFilter === 'unassigned'
+          ? task.assigneeId === null
+          : task.assigneeId === assigneeFilter);
+
+      return matchesSearch && matchesStatus && matchesAssignee;
+    }
+
+    function branchMatches(task: Task): boolean {
+      return taskMatches(task) || task.subtasks.some(branchMatches);
+    }
 
     function visit(branch: Task[], depth = 0) {
       branch.forEach((task) => {
@@ -122,7 +126,7 @@ export function TaskListPage({ onCreateTask }: TaskListPageProps) {
     visit(tasks);
 
     return result;
-  }, [branchMatches, taskMatches, tasks, filtering, collapsed]);
+  }, [assigneeFilter, collapsed, filtering, search, statusFilter, tasks]);
 
   function toggleTask(taskId: string) {
     setCollapsed((current) => {
@@ -231,7 +235,7 @@ export function TaskListPage({ onCreateTask }: TaskListPageProps) {
                   value: 'unassigned',
                   label: 'Unassigned',
                 },
-                ...DEVELOPERS.map((developer) => ({
+                ...developers.map((developer) => ({
                   value: developer.id,
                   label: developer.name,
                 })),
@@ -263,6 +267,7 @@ export function TaskListPage({ onCreateTask }: TaskListPageProps) {
                 <TaskRow
                   key={task.id}
                   task={task}
+                  developers={developers}
                   depth={depth}
                   contextOnly={contextOnly}
                   expanded={filtering || !collapsed.has(task.id)}
@@ -353,6 +358,7 @@ function TaskSummary({ tasks }: { tasks: Task[] }) {
 
 function TaskRow({
   task,
+  developers,
   depth,
   expanded,
   contextOnly,
@@ -360,13 +366,14 @@ function TaskRow({
   onUpdate,
 }: {
   task: Task;
+  developers: Developer[];
   depth: number;
   expanded: boolean;
   contextOnly: boolean;
   onToggle: () => void;
   onUpdate: (update: TaskUpdate) => void;
 }) {
-  const eligibleDevelopers = getEligibleDevelopers(task);
+  const eligibleDevelopers = getEligibleDevelopers(developers, task);
 
   const unfinishedDescendants = flattenTasks(task.subtasks).filter(
     (subtask) => subtask.status !== 'Done',
@@ -442,23 +449,17 @@ function TaskRow({
         <Group gap={5}>
           {task.requiredSkills.map((skill) => (
             <Badge
-              key={skill}
+              key={skill.id}
               variant='light'
-              color={skill === 'Frontend' ? 'blue' : 'gray'}
+              color={skill.name === 'Frontend' ? 'blue' : 'gray'}
               radius='sm'
               tt='none'
               fw={500}
             >
-              {skill}
+              {skill.name}
             </Badge>
           ))}
         </Group>
-
-        {task.skillSource === 'identified' && (
-          <Text size='xs' c='dimmed' mt={5}>
-            Auto-identified
-          </Text>
-        )}
       </Table.Td>
 
       <Table.Td>

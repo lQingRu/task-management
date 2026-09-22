@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Badge,
   Button,
   Group,
+  Loader,
   Paper,
   SimpleGrid,
   Stack,
@@ -12,7 +13,8 @@ import {
 } from '@mantine/core';
 import { IconCheck, IconInfoCircle } from '@tabler/icons-react';
 
-import { createTask } from '../services/createTask';
+import type { Skill } from '../../../domain/task';
+import { createTask, listAvailableSkills } from '../services/createTask';
 import {
   countTasks,
   createEmptyTaskDraft,
@@ -26,11 +28,34 @@ export function TaskCreationPage() {
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [loadingSkills, setLoadingSkills] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setError(null);
+        setSkills(await listAvailableSkills());
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Unable to load skills.',
+        );
+      } finally {
+        setLoadingSkills(false);
+      }
+    }
+
+    void load();
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setShowErrors(true);
     setSuccessMessage(null);
+    setError(null);
 
     if (!validateTaskDraft(draft)) {
       return;
@@ -46,6 +71,12 @@ export function TaskCreationPage() {
       setSuccessMessage(`"${created.title}" was created successfully.`);
       setDraft(createEmptyTaskDraft());
       setShowErrors(false);
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : 'Unable to create the task.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -80,6 +111,17 @@ export function TaskCreationPage() {
         </Alert>
       )}
 
+      {error && (
+        <Alert
+          color='red'
+          mb='lg'
+          withCloseButton
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
+
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing='xl'>
         <Paper
           component='form'
@@ -90,9 +132,19 @@ export function TaskCreationPage() {
         >
           <TaskEditor
             task={draft}
+            skills={skills}
             onChange={setDraft}
             showErrors={showErrors}
           />
+
+          {loadingSkills && (
+            <Group gap='xs' mt='md'>
+              <Loader size='xs' />
+              <Text size='sm' c='dimmed'>
+                Loading skills…
+              </Text>
+            </Group>
+          )}
 
           {showErrors && !validateTaskDraft(draft) && (
             <Alert color='red' mt='lg'>
@@ -111,7 +163,11 @@ export function TaskCreationPage() {
               will be created
             </Text>
 
-            <Button type='submit' loading={submitting}>
+            <Button
+              type='submit'
+              loading={submitting}
+              disabled={loadingSkills}
+            >
               Create task
             </Button>
           </Group>
@@ -146,8 +202,8 @@ export function TaskCreationPage() {
             color='gray'
             title='Skills are optional'
           >
-            If no skills are selected, they will be populated from the task
-            title by the LLM.
+            If no skills are selected, the task will be created without skill
+            requirements.
           </Alert>
         </Stack>
       </SimpleGrid>

@@ -1,35 +1,77 @@
-import {
-  updateTaskTree,
-  type Task,
-  type TaskUpdate,
-} from '../../../domain/task';
-import { sampleTasks } from '../data/sampleTasks';
+import type {
+  ApiDeveloper,
+  ApiTask,
+  ApiTaskStatus,
+} from '../../../api/contracts';
+import { getDevelopers } from '../../../api/developers';
+import { getTasks, patchTask } from '../../../api/tasks';
+import type { Developer, Task, TaskStatus, TaskUpdate } from '../../../domain/task';
 
-let taskStore: Task[] = structuredClone(sampleTasks);
+const statusFromApi: Record<ApiTaskStatus, TaskStatus> = {
+  TODO: 'To-do',
+  IN_PROGRESS: 'In progress',
+  DONE: 'Done',
+};
 
-function wait(milliseconds = 250) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
+const statusToApi: Record<TaskStatus, ApiTaskStatus> = {
+  'To-do': 'TODO',
+  'In progress': 'IN_PROGRESS',
+  Done: 'DONE',
+};
+
+function toTask(response: ApiTask): Task {
+  return {
+    id: response.id,
+    title: response.title,
+    requiredSkills: response.skills,
+    assigneeId: response.assignee?.id ?? null,
+    status: statusFromApi[response.status],
+    subtasks: response.subtasks.map(toTask),
+  };
 }
 
-function cloneTasks(tasks: Task[]): Task[] {
-  return structuredClone(tasks);
+function toDeveloper(response: ApiDeveloper): Developer {
+  return {
+    id: response.id,
+    name: response.name,
+    skills: response.skills.map(({ id, name }) => ({ id, name })),
+  };
 }
 
-export async function listTasks(): Promise<Task[]> {
-  await wait();
+export interface TaskListData {
+  tasks: Task[];
+  developers: Developer[];
+}
 
-  return cloneTasks(taskStore);
+async function loadTasks(): Promise<Task[]> {
+  return (await getTasks()).map(toTask);
+}
+
+export async function loadTaskList(): Promise<TaskListData> {
+  const [tasks, developers] = await Promise.all([
+    loadTasks(),
+    getDevelopers(),
+  ]);
+
+  return {
+    tasks,
+    developers: developers.map(toDeveloper),
+  };
 }
 
 export async function updateTask(
   taskId: string,
   update: TaskUpdate,
 ): Promise<Task[]> {
-  await wait();
+  await patchTask(taskId, {
+    ...(update.assigneeId !== undefined
+      ? { assigneeId: update.assigneeId }
+      : {}),
+    ...(update.status !== undefined
+      ? { status: statusToApi[update.status] }
+      : {}),
+  });
 
-  taskStore = updateTaskTree(taskStore, taskId, update);
-
-  return cloneTasks(taskStore);
+  // Reload the hierarchy because reopening a task may also update its ancestors.
+  return loadTasks();
 }

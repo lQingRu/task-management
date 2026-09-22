@@ -11,7 +11,7 @@ import {
 } from '@mantine/core';
 import { IconCornerDownRight, IconPlus, IconTrash } from '@tabler/icons-react';
 
-import { SKILLS, type Skill } from '../../../domain/task.js';
+import type { Skill } from '../../../domain/task.js';
 
 import {
   createEmptyTaskDraft,
@@ -20,6 +20,7 @@ import {
 
 interface TaskEditorProps {
   task: TaskDraft;
+  skills: Skill[];
   onChange: (task: TaskDraft) => void;
   showErrors: boolean;
   path?: string;
@@ -28,6 +29,7 @@ interface TaskEditorProps {
 
 export function TaskEditor({
   task,
+  skills,
   onChange,
   showErrors,
   path = '1',
@@ -115,15 +117,18 @@ export function TaskEditor({
 
         <MultiSelect
           label='Required skills'
-          description='Optional. Leave blank for automatic identification.'
+          description='Optional. Leave blank for no skill requirements.'
           placeholder='Select skills'
-          data={[...SKILLS]}
-          value={task.requiredSkills}
+          data={skills.map((skill) => ({
+            value: skill.id,
+            label: skill.name,
+          }))}
+          value={task.skillIds}
           clearable
-          onChange={(skills) =>
+          onChange={(skillIds) =>
             onChange({
               ...task,
-              requiredSkills: skills as Skill[],
+              skillIds,
             })
           }
         />
@@ -132,6 +137,7 @@ export function TaskEditor({
           <TaskEditor
             key={subtask.clientId}
             task={subtask}
+            skills={skills}
             path={`${path}.${index + 1}`}
             showErrors={showErrors}
             onChange={updateSubtask}
