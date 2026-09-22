@@ -37,6 +37,10 @@
                 "value": "TODO"
               },
               {
+                "name": "IN_PROGRESS",
+                "value": "IN_PROGRESS"
+              },
+              {
                 "name": "DONE",
                 "value": "DONE"
               }
@@ -651,8 +655,8 @@
             "task": {
               "checks": [
                 {
-                  "expression": "\"status\" IN ('TODO', 'DONE')",
-                  "name": "task_status_check_ffceb8a5",
+                  "expression": "\"status\" IN ('TODO', 'IN_PROGRESS', 'DONE')",
+                  "name": "task_status_check_b2033264",
                   "prefix": "task_status_check"
                 }
               ],
@@ -849,6 +853,7 @@
               "kind": "valueSet",
               "values": [
                 "TODO",
+                "IN_PROGRESS",
                 "DONE"
               ]
             }
@@ -858,7 +863,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "d65197d11ce9ab407b994bcd0089b64b76c3733304ea7a7b8fb61be0c712acd4"
+    "storageHash": "9122ec690d7b09d5fb9266b894b1785cfb5f0a6f98989268a1f82aa33e92e507"
   },
   "execution": {
     "executionHash": "2b472d7670640e97f51d709eff36c0cc4272b47192a990180fbde52a62057578",

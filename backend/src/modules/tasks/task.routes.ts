@@ -5,20 +5,35 @@ import {
   createTaskBodySchema,
   createdTaskResponseSchema,
   taskErrorResponseSchema,
+  taskParamsSchema,
+  taskResponseSchema,
   tasksResponseSchema,
+  updateTaskBodySchema,
   type CreateTaskInput,
   type CreatedTaskResponse,
+  type UpdateTaskInput,
 } from "./task.schema.js";
-import { createTask, getTasks, TaskCreationError } from "./task.service.js";
+import {
+  createTask,
+  getTasks,
+  TaskCreationError,
+  TaskUpdateError,
+  updateTask,
+} from "./task.service.js";
 
 export type CreateTask = (
   input: CreateTaskInput,
 ) => Promise<CreatedTaskResponse>;
 export type GetTasks = () => Promise<CreatedTaskResponse[]>;
+export type UpdateTask = (
+  taskId: string,
+  input: UpdateTaskInput,
+) => Promise<CreatedTaskResponse>;
 
 interface TaskRoutesOptions {
   createTask?: CreateTask;
   getTasks?: GetTasks;
+  updateTask?: UpdateTask;
 }
 
 export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (
@@ -27,6 +42,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (
 ) => {
   const create = options.createTask ?? createTask;
   const loadTasks = options.getTasks ?? getTasks;
+  const update = options.updateTask ?? updateTask;
 
   app.withTypeProvider<ZodTypeProvider>().get(
     "/v1/tasks",
@@ -57,6 +73,35 @@ export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (
         return reply.code(201).send(task);
       } catch (error) {
         if (error instanceof TaskCreationError) {
+          return reply.code(error.statusCode).send({
+            code: error.code,
+            message: error.message,
+          });
+        }
+
+        throw error;
+      }
+    },
+  );
+
+  app.withTypeProvider<ZodTypeProvider>().patch(
+    "/v1/tasks/:id",
+    {
+      schema: {
+        params: taskParamsSchema,
+        body: updateTaskBodySchema,
+        response: {
+          200: taskResponseSchema,
+          404: taskErrorResponseSchema,
+          422: taskErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        return await update(request.params.id, request.body);
+      } catch (error) {
+        if (error instanceof TaskUpdateError) {
           return reply.code(error.statusCode).send({
             code: error.code,
             message: error.message,

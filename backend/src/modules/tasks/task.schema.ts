@@ -9,6 +9,24 @@ export const createTaskBodySchema = z.object({
   parentId: z.uuid().nullable().optional(),
 });
 
+export const taskParamsSchema = z.object({
+  id: z.uuid(),
+});
+
+export const updateTaskBodySchema = z
+  .object({
+    title: z.string().trim().min(1).optional(),
+    status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+    assigneeId: z.uuid().nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.title !== undefined ||
+      value.status !== undefined ||
+      value.assigneeId !== undefined,
+    { message: "At least one field must be provided" },
+  );
+
 export const taskAssigneeSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
@@ -46,3 +64,4 @@ export const taskErrorResponseSchema = z.object({
 
 export type CreateTaskInput = z.infer<typeof createTaskBodySchema>;
 export type CreatedTaskResponse = TaskResponse;
+export type UpdateTaskInput = z.infer<typeof updateTaskBodySchema>;

@@ -2,6 +2,7 @@ import type {
   CreateTaskInput,
   CreatedTaskResponse,
   TaskResponse,
+  UpdateTaskInput,
 } from "./task.schema.js";
 import { taskRepository, type TaskRepository } from "./task.repository.js";
 
@@ -148,4 +149,108 @@ export async function getTasks(
   }
 
   return rootTasks;
+}
+
+export type TaskUpdateErrorCode =
+  | "TASK_NOT_FOUND"
+  | "ASSIGNEE_NOT_FOUND"
+  | "ASSIGNEE_MISSING_SKILLS"
+  | "SUBTASKS_NOT_DONE";
+
+export class TaskUpdateError extends Error {
+  constructor(
+    readonly code: TaskUpdateErrorCode,
+    readonly statusCode: 404 | 422,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TaskUpdateError";
+  }
+}
+
+export async function updateTask(
+  taskId: string,
+  input: UpdateTaskInput,
+  repository: TaskRepository = taskRepository,
+): Promise<TaskResponse> {
+  const currentTask = await repository.findById(taskId);
+
+  if (!currentTask) {
+    throw new TaskUpdateError(
+      "TASK_NOT_FOUND",
+      404,
+      `Task not found: ${taskId}`,
+    );
+  }
+
+  if (
+    input.status === "DONE" &&
+    currentTask.subtasks.some((subtask) => subtask.status !== "DONE")
+  ) {
+    throw new TaskUpdateError(
+      "SUBTASKS_NOT_DONE",
+      422,
+      "A task cannot be completed while it has unfinished subtasks",
+    );
+  }
+
+  if (input.assigneeId) {
+    const assignee = await repository.findDeveloperById(input.assigneeId);
+
+    if (!assignee) {
+      throw new TaskUpdateError(
+        "ASSIGNEE_NOT_FOUND",
+        422,
+        `Developer not found: ${input.assigneeId}`,
+      );
+    }
+
+    const requiredSkillIds = currentTask.skills.map(({ skill }) => {
+      if (!skill) {
+        throw new Error(`Task ${taskId} has an invalid skill relation`);
+      }
+
+      return skill.id;
+    });
+    const assigneeSkillIds = new Set(
+      assignee.skills.map(({ skillId }) => skillId),
+    );
+
+    if (requiredSkillIds.some((skillId) => !assigneeSkillIds.has(skillId))) {
+      throw new TaskUpdateError(
+        "ASSIGNEE_MISSING_SKILLS",
+        422,
+        "The selected developer does not possess all required skills",
+      );
+    }
+  }
+
+  const reopenAncestors =
+    currentTask.status === "DONE" &&
+    input.status !== undefined &&
+    input.status !== "DONE";
+
+  await repository.update(taskId, input, reopenAncestors);
+
+  const updatedTask = findTask(await getTasks(repository), taskId);
+  if (!updatedTask) {
+    throw new Error(`Updated task ${taskId} could not be retrieved`);
+  }
+
+  return updatedTask;
+}
+
+function findTask(tasks: TaskResponse[], taskId: string): TaskResponse | null {
+  for (const task of tasks) {
+    if (task.id === taskId) {
+      return task;
+    }
+
+    const nestedTask = findTask(task.subtasks, taskId);
+    if (nestedTask) {
+      return nestedTask;
+    }
+  }
+
+  return null;
 }

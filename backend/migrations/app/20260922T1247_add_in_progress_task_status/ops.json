@@ -1,0 +1,86 @@
+[
+  {
+    "id": "dropCheckConstraint.task.task_status_check_ffceb8a5",
+    "label": "Drop check constraint \"task_status_check_ffceb8a5\" on \"task\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "task_status_check_ffceb8a5",
+        "table": "task"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"task_status_check_ffceb8a5\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "task_status_check_ffceb8a5",
+          "public",
+          "\"public\".\"task\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"task_status_check_ffceb8a5\"",
+        "sql": "ALTER TABLE \"public\".\"task\" DROP CONSTRAINT \"task_status_check_ffceb8a5\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"task_status_check_ffceb8a5\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "task_status_check_ffceb8a5",
+          "public",
+          "\"public\".\"task\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.task.task_status_check_b2033264",
+    "label": "Add check constraint \"task_status_check_b2033264\" on \"task\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "task_status_check_b2033264",
+        "table": "task"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"task_status_check_b2033264\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "task_status_check_b2033264",
+          "public",
+          "\"public\".\"task\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"task_status_check_b2033264\"",
+        "sql": "ALTER TABLE \"public\".\"task\" ADD CONSTRAINT \"task_status_check_b2033264\" CHECK (\"status\" IN ('TODO', 'IN_PROGRESS', 'DONE'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"task_status_check_b2033264\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "task_status_check_b2033264",
+          "public",
+          "\"public\".\"task\""
+        ]
+      }
+    ]
+  }
+]

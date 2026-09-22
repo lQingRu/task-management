@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { TaskRepository } from "./task.repository.js";
-import { createTask, getTasks } from "./task.service.js";
+import { createTask, getTasks, updateTask } from "./task.service.js";
 
 const taskId = "11111111-1111-4111-8111-111111111111";
 const backendSkillId = "22222222-2222-4222-8222-222222222222";
@@ -23,6 +23,8 @@ function createRepository(
       parentId: null,
     }),
     findAll: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(null),
+    update: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -224,5 +226,114 @@ describe("getTasks", () => {
     const tasks = await getTasks(createRepository());
 
     expect(tasks).toEqual([]);
+  });
+});
+
+describe("updateTask", () => {
+  const currentTask = {
+    id: taskId,
+    title: "Build the API",
+    status: "TODO" as const,
+    parentId: null,
+    assignee: null,
+    skills: [{ skill: { id: backendSkillId, name: "Backend" } }],
+    subtasks: [],
+  };
+
+  it("updates a task status when all subtasks are done", async () => {
+    const repository = createRepository({
+      findById: vi.fn().mockResolvedValue({
+        ...currentTask,
+        subtasks: [{ id: parentId, status: "DONE" }],
+      }),
+      findAll: vi.fn().mockResolvedValue([
+        {
+          ...currentTask,
+          status: "DONE",
+        },
+      ]),
+    });
+
+    const task = await updateTask(taskId, { status: "DONE" }, repository);
+
+    expect(task.status).toBe("DONE");
+    expect(repository.update).toHaveBeenCalledWith(
+      taskId,
+      { status: "DONE" },
+      false,
+    );
+  });
+
+  it("rejects completion while a subtask is unfinished", async () => {
+    const repository = createRepository({
+      findById: vi.fn().mockResolvedValue({
+        ...currentTask,
+        subtasks: [{ id: parentId, status: "IN_PROGRESS" }],
+      }),
+    });
+
+    await expect(
+      updateTask(taskId, { status: "DONE" }, repository),
+    ).rejects.toMatchObject({
+      code: "SUBTASKS_NOT_DONE",
+      statusCode: 422,
+    });
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects an assignee who lacks a required skill", async () => {
+    const repository = createRepository({
+      findById: vi.fn().mockResolvedValue(currentTask),
+      findDeveloperById: vi.fn().mockResolvedValue({
+        id: developerId,
+        name: "Alice",
+        skills: [{ skillId: frontendSkillId }],
+      }),
+    });
+
+    await expect(
+      updateTask(taskId, { assigneeId: developerId }, repository),
+    ).rejects.toMatchObject({
+      code: "ASSIGNEE_MISSING_SKILLS",
+      statusCode: 422,
+    });
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it("reopens completed ancestors when a completed child is reopened", async () => {
+    const childId = "66666666-6666-4666-8666-666666666666";
+    const completedChild = {
+      ...currentTask,
+      id: childId,
+      status: "DONE" as const,
+      parentId: taskId,
+    };
+    const repository = createRepository({
+      findById: vi.fn().mockResolvedValue(completedChild),
+      findAll: vi.fn().mockResolvedValue([
+        {
+          ...currentTask,
+          status: "IN_PROGRESS",
+          skills: [],
+        },
+        {
+          ...completedChild,
+          status: "IN_PROGRESS",
+        },
+      ]),
+    });
+
+    const task = await updateTask(
+      childId,
+      { status: "IN_PROGRESS" },
+      repository,
+    );
+
+    expect(task.status).toBe("IN_PROGRESS");
+    expect(repository.update).toHaveBeenCalledWith(
+      childId,
+      { status: "IN_PROGRESS" },
+      true,
+    );
   });
 });

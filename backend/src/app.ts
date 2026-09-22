@@ -14,6 +14,7 @@ import {
   taskRoutes,
   type CreateTask,
   type GetTasks,
+  type UpdateTask,
 } from "./modules/tasks/task.routes.js";
 
 interface AppServices {
@@ -21,6 +22,7 @@ interface AppServices {
   getSkills?: GetSkills;
   createTask?: CreateTask;
   getTasks?: GetTasks;
+  updateTask?: UpdateTask;
 }
 
 interface BuildAppOptions {
@@ -55,6 +57,7 @@ export function buildApp(options: BuildAppOptions = {}) {
   app.register(taskRoutes, {
     createTask: options.services?.createTask,
     getTasks: options.services?.getTasks,
+    updateTask: options.services?.updateTask,
   });
 
   return app;
