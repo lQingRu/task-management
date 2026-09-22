@@ -1,0 +1,95 @@
+:root {
+  color: #212529;
+  background: #f8f9fa;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f8f9fa;
+}
+
+.page-content {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--mantine-color-blue-7);
+  background: var(--mantine-color-blue-0);
+  border-radius: 4px;
+}
+
+.navigation-label,
+.eyebrow {
+  color: var(--mantine-color-dimmed);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+}
+
+.navigation-label {
+  margin: 8px 12px 12px;
+}
+
+.eyebrow {
+  margin-bottom: 10px;
+}
+
+.creation-form {
+  grid-column: span 2;
+  background: white;
+}
+
+.subtask-card {
+  border-left: 3px solid var(--mantine-color-blue-2);
+  background: var(--mantine-color-gray-0);
+}
+
+.add-subtask-button {
+  align-self: flex-start;
+}
+
+.form-footer {
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
+
+.hint-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+@media (max-width: 62em) {
+  .page-content {
+    padding: 28px;
+  }
+
+  .creation-form {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 48em) {
+  .page-content {
+    padding: 24px 16px;
+  }
+
+  .creation-form {
+    padding: 18px;
+  }
+
+  .subtask-card {
+    padding: 12px;
+  }
+}
