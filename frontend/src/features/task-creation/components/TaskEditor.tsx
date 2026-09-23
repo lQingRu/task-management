@@ -116,8 +116,7 @@ export function TaskEditor({
         />
 
         <MultiSelect
-          label='Required skills'
-          description='Optional. Leave blank for no skill requirements.'
+          label='Skills'
           placeholder='Select skills'
           data={skills.map((skill) => ({
             value: skill.id,

@@ -163,11 +163,7 @@ export function TaskCreationPage() {
               will be created
             </Text>
 
-            <Button
-              type='submit'
-              loading={submitting}
-              disabled={loadingSkills}
-            >
+            <Button type='submit' loading={submitting} disabled={loadingSkills}>
               Create task
             </Button>
           </Group>
@@ -200,10 +196,10 @@ export function TaskCreationPage() {
           <Alert
             icon={<IconInfoCircle size={18} />}
             color='gray'
-            title='Skills are optional'
+            title='Skills'
           >
-            If no skills are selected, the task will be created without skill
-            requirements.
+            If no skills are selected, the task will be created with LLM
+            suggested skills.
           </Alert>
         </Stack>
       </SimpleGrid>

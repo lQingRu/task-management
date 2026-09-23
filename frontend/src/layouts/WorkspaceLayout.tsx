@@ -36,10 +36,6 @@ export function WorkspaceLayout({
           <Text fw={600}>Task workspace</Text>
 
           <span className='header-divider' />
-
-          <Text size='sm' c='dimmed'>
-            Assessment
-          </Text>
         </Group>
       </AppShell.Header>
 
@@ -67,10 +63,6 @@ export function WorkspaceLayout({
         </Button>
 
         <div className='navigation-footer'>
-          <Text size='xs' c='dimmed'>
-            LOCAL DEMO
-          </Text>
-
           <Text size='xs' c='dimmed' mt='xs'>
             Changes are saved to the task service.
           </Text>

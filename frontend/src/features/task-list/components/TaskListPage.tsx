@@ -256,9 +256,9 @@ export function TaskListPage({ onCreateTask }: TaskListPageProps) {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th w='44%'>Task</Table.Th>
-                <Table.Th w='20%'>Required skills</Table.Th>
-                <Table.Th w='20%'>Assignee</Table.Th>
+                <Table.Th w='20%'>Skills</Table.Th>
                 <Table.Th w='16%'>Status</Table.Th>
+                <Table.Th w='20%'>Assignee</Table.Th>
               </Table.Tr>
             </Table.Thead>
 
@@ -419,16 +419,6 @@ function TaskRow({
             </Text>
 
             <Group gap='xs' mt={5}>
-              <Text size='xs' c='dimmed'>
-                {task.id}
-              </Text>
-
-              {depth > 0 && (
-                <Text size='xs' c='dimmed'>
-                  Level {depth}
-                </Text>
-              )}
-
               {task.subtasks.length > 0 && (
                 <Text size='xs' c='dimmed'>
                   {completedDirectSubtasks}/{task.subtasks.length} subtasks done
@@ -460,28 +450,6 @@ function TaskRow({
             </Badge>
           ))}
         </Group>
-      </Table.Td>
-
-      <Table.Td>
-        <Select
-          aria-label={`Assignee for ${task.title}`}
-          placeholder='Unassigned'
-          clearable
-          searchable
-          data={eligibleDevelopers.map((developer) => ({
-            value: developer.id,
-            label: developer.name,
-          }))}
-          value={task.assigneeId}
-          nothingFoundMessage='No eligible developers'
-          onChange={(assigneeId) => onUpdate({ assigneeId })}
-        />
-
-        <Text size='xs' c='dimmed' mt={4}>
-          {eligibleDevelopers.length === 1
-            ? `${eligibleDevelopers[0].name} has all required skills`
-            : `${eligibleDevelopers.length} eligible developers`}
-        </Text>
       </Table.Td>
 
       <Table.Td>
@@ -523,6 +491,27 @@ function TaskRow({
             {unfinishedDescendants === 1 ? 'subtask' : 'subtasks'}
           </Text>
         )}
+      </Table.Td>
+      <Table.Td>
+        <Select
+          aria-label={`Assignee for ${task.title}`}
+          placeholder='Unassigned'
+          clearable
+          searchable
+          data={eligibleDevelopers.map((developer) => ({
+            value: developer.id,
+            label: developer.name,
+          }))}
+          value={task.assigneeId}
+          nothingFoundMessage='No eligible developers'
+          onChange={(assigneeId) => onUpdate({ assigneeId })}
+        />
+
+        <Text size='xs' c='dimmed' mt={4}>
+          {eligibleDevelopers.length === 1
+            ? `${eligibleDevelopers[0].name} has all required skills`
+            : `${eligibleDevelopers.length} eligible developers`}
+        </Text>
       </Table.Td>
     </Table.Tr>
   );
