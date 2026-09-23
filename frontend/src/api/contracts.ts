@@ -25,6 +25,7 @@ export interface CreateTaskBody {
   title: string;
   skillIds: string[];
   parentId?: string;
+  subtasks?: CreateTaskBody[];
 }
 
 export interface UpdateTaskBody {

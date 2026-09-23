@@ -58,6 +58,47 @@ describe("POST /v1/tasks", () => {
     expect(createTask).not.toHaveBeenCalled();
   });
 
+  it("accepts and normalizes a nested Task tree", async () => {
+    const childId = "33333333-3333-4333-8333-333333333333";
+    const createTask = vi.fn().mockResolvedValue({
+      id: taskId,
+      title: "Build the API",
+      status: "TODO",
+      skills: [{ id: skillId, name: "Backend" }],
+      assignee: null,
+      parentId: null,
+      subtasks: [
+        {
+          id: childId,
+          title: "Write tests",
+          status: "TODO",
+          skills: [{ id: skillId, name: "Backend" }],
+          assignee: null,
+          parentId: taskId,
+          subtasks: [],
+        },
+      ],
+    });
+    const app = buildApp({ logger: false, services: { createTask } });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/tasks",
+      payload: {
+        title: "  Build the API  ",
+        skillIds: [skillId],
+        subtasks: [{ title: "  Write tests  ", skillIds: [skillId] }],
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(createTask).toHaveBeenCalledWith({
+      title: "Build the API",
+      skillIds: [skillId],
+      subtasks: [{ title: "Write tests", skillIds: [skillId] }],
+    });
+  });
+
   it("returns a domain validation error", async () => {
     const createTask = vi
       .fn()

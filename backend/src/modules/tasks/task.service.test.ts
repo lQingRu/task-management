@@ -9,9 +9,11 @@ const backendSkillId = "22222222-2222-4222-8222-222222222222";
 const frontendSkillId = "33333333-3333-4333-8333-333333333333";
 const developerId = "44444444-4444-4444-8444-444444444444";
 const parentId = "55555555-5555-4555-8555-555555555555";
+const childId = "66666666-6666-4666-8666-666666666666";
+const devOpsSkillId = "77777777-7777-4777-8777-777777777777";
 
 function createInferenceService(
-  skills: Array<"Frontend" | "Backend"> = ["Backend"],
+  skills: string[] = ["Backend"],
 ): SkillInferenceService {
   return {
     inferSkills: vi.fn().mockResolvedValue(skills),
@@ -23,14 +25,18 @@ function createRepository(
 ): TaskRepository {
   return {
     findSkillsByIds: vi.fn().mockResolvedValue([]),
-    findSkillsByNames: vi.fn().mockResolvedValue([]),
+    findAllSkills: vi.fn().mockResolvedValue([
+      { id: backendSkillId, name: "Backend" },
+      { id: frontendSkillId, name: "Frontend" },
+    ]),
     findDeveloperById: vi.fn().mockResolvedValue(null),
     taskExists: vi.fn().mockResolvedValue(true),
-    create: vi.fn().mockResolvedValue({
+    createTree: vi.fn().mockResolvedValue({
       id: taskId,
       title: "Build the API",
       status: "TODO",
       parentId: null,
+      subtasks: [],
     }),
     findAll: vi.fn().mockResolvedValue([]),
     findById: vi.fn().mockResolvedValue(null),
@@ -41,11 +47,7 @@ function createRepository(
 
 describe("createTask", () => {
   it("infers and persists skills when skillIds is omitted", async () => {
-    const repository = createRepository({
-      findSkillsByNames: vi
-        .fn()
-        .mockResolvedValue([{ id: backendSkillId, name: "Backend" }]),
-    });
+    const repository = createRepository();
     const inferenceService = createInferenceService();
 
     const task = await createTask(
@@ -63,15 +65,21 @@ describe("createTask", () => {
       parentId: null,
       subtasks: [],
     });
-    expect(inferenceService.inferSkills).toHaveBeenCalledWith("Build the API");
-    expect(repository.findSkillsByNames).toHaveBeenCalledWith(["Backend"]);
+    expect(inferenceService.inferSkills).toHaveBeenCalledWith("Build the API", [
+      "Backend",
+      "Frontend",
+    ]);
+    expect(repository.findAllSkills).toHaveBeenCalledOnce();
     expect(repository.findSkillsByIds).not.toHaveBeenCalled();
-    expect(repository.create).toHaveBeenCalledWith({
-      title: "Build the API",
-      skillIds: [backendSkillId],
-      assigneeId: null,
-      parentId: null,
-    });
+    expect(repository.createTree).toHaveBeenCalledWith(
+      {
+        title: "Build the API",
+        skillIds: [backendSkillId],
+        assigneeId: null,
+        subtasks: [],
+      },
+      null,
+    );
   });
 
   it("creates a task when the assignee has every required skill", async () => {
@@ -86,11 +94,12 @@ describe("createTask", () => {
         name: "Carol",
         skills: [{ skillId: backendSkillId }, { skillId: frontendSkillId }],
       }),
-      create: vi.fn().mockResolvedValue({
+      createTree: vi.fn().mockResolvedValue({
         id: taskId,
         title: "Build the API",
         status: "TODO",
         parentId,
+        subtasks: [],
       }),
     });
 
@@ -111,21 +120,110 @@ describe("createTask", () => {
       backendSkillId,
       frontendSkillId,
     ]);
-    expect(repository.create).toHaveBeenCalledWith({
-      title: "Build the API",
-      skillIds: [backendSkillId, frontendSkillId],
-      assigneeId: developerId,
+    expect(repository.createTree).toHaveBeenCalledWith(
+      {
+        title: "Build the API",
+        skillIds: [backendSkillId, frontendSkillId],
+        assigneeId: developerId,
+        subtasks: [],
+      },
       parentId,
-    });
+    );
     expect(inferenceService.inferSkills).not.toHaveBeenCalled();
   });
 
-  it("treats an empty skillIds array as requiring inference", async () => {
+  it("persists a complete Task tree through one repository call", async () => {
     const repository = createRepository({
-      findSkillsByNames: vi
+      findSkillsByIds: vi
         .fn()
-        .mockResolvedValue([{ id: frontendSkillId, name: "Frontend" }]),
+        .mockResolvedValue([{ id: backendSkillId, name: "Backend" }]),
+      createTree: vi.fn().mockResolvedValue({
+        id: taskId,
+        title: "Build the API",
+        status: "TODO",
+        parentId: null,
+        subtasks: [
+          {
+            id: childId,
+            title: "Write integration tests",
+            status: "TODO",
+            parentId: taskId,
+            subtasks: [],
+          },
+        ],
+      }),
     });
+
+    const task = await createTask(
+      {
+        title: "Build the API",
+        skillIds: [backendSkillId],
+        subtasks: [
+          {
+            title: "Write integration tests",
+            skillIds: [backendSkillId],
+          },
+        ],
+      },
+      repository,
+    );
+
+    expect(repository.createTree).toHaveBeenCalledOnce();
+    expect(repository.createTree).toHaveBeenCalledWith(
+      {
+        title: "Build the API",
+        skillIds: [backendSkillId],
+        assigneeId: null,
+        subtasks: [
+          {
+            title: "Write integration tests",
+            skillIds: [backendSkillId],
+            assigneeId: null,
+            subtasks: [],
+          },
+        ],
+      },
+      null,
+    );
+    expect(task.subtasks).toEqual([
+      {
+        id: childId,
+        title: "Write integration tests",
+        status: "TODO",
+        parentId: taskId,
+        assignee: null,
+        skills: [{ id: backendSkillId, name: "Backend" }],
+        subtasks: [],
+      },
+    ]);
+  });
+
+  it("does not persist any Task when a subtask cannot be prepared", async () => {
+    const repository = createRepository();
+    const inferenceService: SkillInferenceService = {
+      inferSkills: vi
+        .fn()
+        .mockResolvedValueOnce(["Backend"])
+        .mockRejectedValueOnce(new Error("provider unavailable")),
+    };
+
+    await expect(
+      createTask(
+        {
+          title: "Build the API",
+          subtasks: [{ title: "Write integration tests" }],
+        },
+        repository,
+        inferenceService,
+      ),
+    ).rejects.toMatchObject({ code: "SKILL_INFERENCE_FAILED" });
+
+    expect(repository.findAllSkills).toHaveBeenCalledOnce();
+    expect(repository.createTree).not.toHaveBeenCalled();
+  });
+
+  it("treats an empty skillIds array as requiring inference", async () => {
+    const repository = createRepository();
     const inferenceService = createInferenceService(["Frontend"]);
 
     await createTask(
@@ -135,8 +233,9 @@ describe("createTask", () => {
     );
 
     expect(inferenceService.inferSkills).toHaveBeenCalledOnce();
-    expect(repository.create).toHaveBeenCalledWith(
+    expect(repository.createTree).toHaveBeenCalledWith(
       expect.objectContaining({ skillIds: [frontendSkillId] }),
+      null,
     );
   });
 
@@ -152,7 +251,61 @@ describe("createTask", () => {
       code: "SKILL_INFERENCE_FAILED",
       statusCode: 503,
     });
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(repository.createTree).not.toHaveBeenCalled();
+  });
+
+  it("fails before inference when no skills are configured", async () => {
+    const repository = createRepository({
+      findAllSkills: vi.fn().mockResolvedValue([]),
+    });
+    const inferenceService = createInferenceService();
+
+    await expect(
+      createTask({ title: "Build the API" }, repository, inferenceService),
+    ).rejects.toMatchObject({
+      code: "NO_SKILLS_CONFIGURED",
+      statusCode: 500,
+    });
+    expect(inferenceService.inferSkills).not.toHaveBeenCalled();
+    expect(repository.createTree).not.toHaveBeenCalled();
+  });
+
+  it("rejects an inferred skill outside the database catalog", async () => {
+    const repository = createRepository();
+    const inferenceService = createInferenceService(["DevOps"]);
+
+    await expect(
+      createTask({ title: "Deploy the API" }, repository, inferenceService),
+    ).rejects.toMatchObject({
+      code: "INVALID_INFERRED_SKILLS",
+      statusCode: 502,
+    });
+    expect(repository.createTree).not.toHaveBeenCalled();
+  });
+
+  it("supports a newly configured database skill without a code change", async () => {
+    const repository = createRepository({
+      findAllSkills: vi
+        .fn()
+        .mockResolvedValue([{ id: devOpsSkillId, name: "DevOps" }]),
+    });
+    const inferenceService = createInferenceService(["DevOps"]);
+
+    const task = await createTask(
+      { title: "Configure the deployment pipeline" },
+      repository,
+      inferenceService,
+    );
+
+    expect(inferenceService.inferSkills).toHaveBeenCalledWith(
+      "Configure the deployment pipeline",
+      ["DevOps"],
+    );
+    expect(task.skills).toEqual([{ id: devOpsSkillId, name: "DevOps" }]);
+    expect(repository.createTree).toHaveBeenCalledWith(
+      expect.objectContaining({ skillIds: [devOpsSkillId] }),
+      null,
+    );
   });
 
   it("rejects unknown skill IDs", async () => {
@@ -167,7 +320,7 @@ describe("createTask", () => {
       code: "SKILLS_NOT_FOUND",
       statusCode: 422,
     });
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(repository.createTree).not.toHaveBeenCalled();
   });
 
   it("rejects an assignee who lacks a required skill", async () => {
@@ -195,7 +348,7 @@ describe("createTask", () => {
       code: "ASSIGNEE_MISSING_SKILLS",
       statusCode: 422,
     });
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(repository.createTree).not.toHaveBeenCalled();
   });
 
   it("rejects an unknown parent task", async () => {
@@ -209,13 +362,12 @@ describe("createTask", () => {
       code: "PARENT_NOT_FOUND",
       statusCode: 422,
     });
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(repository.createTree).not.toHaveBeenCalled();
   });
 });
 
 describe("getTasks", () => {
   it("returns root tasks with nested subtasks", async () => {
-    const childId = "66666666-6666-4666-8666-666666666666";
     const repository = createRepository({
       findAll: vi.fn().mockResolvedValue([
         {

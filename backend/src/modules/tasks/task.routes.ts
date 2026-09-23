@@ -65,6 +65,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (
           201: createdTaskResponseSchema,
           422: taskErrorResponseSchema,
           500: taskErrorResponseSchema,
+          502: taskErrorResponseSchema,
           503: taskErrorResponseSchema,
         },
       },

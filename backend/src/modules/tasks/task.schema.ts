@@ -2,11 +2,32 @@ import { z } from "zod";
 
 import { skillSchema } from "../skills/skill.schema.js";
 
-export const createTaskBodySchema = z.object({
+export interface CreateTaskNodeInput {
+  title: string;
+  skillIds?: string[];
+  assigneeId?: string | null;
+  subtasks?: CreateTaskNodeInput[];
+}
+
+export interface CreateTaskInput extends CreateTaskNodeInput {
+  parentId?: string | null;
+}
+
+const createTaskNodeSchema: z.ZodType<CreateTaskNodeInput> = z.lazy(() =>
+  z.object({
+    title: z.string().trim().min(1),
+    skillIds: z.array(z.uuid()).optional(),
+    assigneeId: z.uuid().nullable().optional(),
+    subtasks: z.array(createTaskNodeSchema).optional(),
+  }),
+);
+
+export const createTaskBodySchema: z.ZodType<CreateTaskInput> = z.object({
   title: z.string().trim().min(1),
   skillIds: z.array(z.uuid()).optional(),
   assigneeId: z.uuid().nullable().optional(),
   parentId: z.uuid().nullable().optional(),
+  subtasks: z.array(createTaskNodeSchema).optional(),
 });
 
 export const taskParamsSchema = z.object({
@@ -62,6 +83,5 @@ export const taskErrorResponseSchema = z.object({
   message: z.string(),
 });
 
-export type CreateTaskInput = z.infer<typeof createTaskBodySchema>;
 export type CreatedTaskResponse = TaskResponse;
 export type UpdateTaskInput = z.infer<typeof updateTaskBodySchema>;

@@ -15,7 +15,7 @@ export interface NewTaskRecord {
   title: string;
   skillIds: string[];
   assigneeId: string | null;
-  parentId: string | null;
+  subtasks: NewTaskRecord[];
 }
 
 export interface CreatedTaskRecord {
@@ -23,6 +23,10 @@ export interface CreatedTaskRecord {
   title: string;
   status: "TODO" | "IN_PROGRESS" | "DONE";
   parentId: string | null;
+}
+
+export interface CreatedTaskTreeRecord extends CreatedTaskRecord {
+  subtasks: CreatedTaskTreeRecord[];
 }
 
 export interface TaskRecord extends CreatedTaskRecord {
@@ -50,10 +54,13 @@ export interface TaskChanges {
 
 export interface TaskRepository {
   findSkillsByIds(skillIds: string[]): Promise<SkillRecord[]>;
-  findSkillsByNames(skillNames: string[]): Promise<SkillRecord[]>;
+  findAllSkills(): Promise<SkillRecord[]>;
   findDeveloperById(developerId: string): Promise<DeveloperRecord | null>;
   taskExists(taskId: string): Promise<boolean>;
-  create(input: NewTaskRecord): Promise<CreatedTaskRecord>;
+  createTree(
+    input: NewTaskRecord,
+    parentId: string | null,
+  ): Promise<CreatedTaskTreeRecord>;
   findAll(): Promise<TaskRecord[]>;
   findById(taskId: string): Promise<TaskForUpdateRecord | null>;
   update(
@@ -74,13 +81,9 @@ export const taskRepository: TaskRepository = {
       .all();
   },
 
-  async findSkillsByNames(skillNames) {
-    if (skillNames.length === 0) {
-      return [];
-    }
-
-    return db.orm.public.Skill.where((skill) => skill.name.in(skillNames))
-      .select("id", "name")
+  async findAllSkills() {
+    return db.orm.public.Skill.select("id", "name")
+      .orderBy((skill) => skill.name.asc())
       .all();
   },
 
@@ -99,29 +102,41 @@ export const taskRepository: TaskRepository = {
     return task !== null;
   },
 
-  async create(input) {
+  async createTree(input, parentId) {
     return db.transaction(async (transaction) => {
-      const task = await transaction.orm.public.Task.select(
-        "id",
-        "title",
-        "status",
-        "parentId",
-      ).create({
-        title: input.title,
-        assigneeId: input.assigneeId,
-        parentId: input.parentId,
-      });
+      async function createNode(
+        node: NewTaskRecord,
+        nodeParentId: string | null,
+      ): Promise<CreatedTaskTreeRecord> {
+        const task = await transaction.orm.public.Task.select(
+          "id",
+          "title",
+          "status",
+          "parentId",
+        ).create({
+          title: node.title,
+          assigneeId: node.assigneeId,
+          parentId: nodeParentId,
+        });
 
-      if (input.skillIds.length > 0) {
-        await transaction.orm.public.TaskSkill.createAll(
-          input.skillIds.map((skillId) => ({
-            taskId: task.id,
-            skillId,
-          })),
-        );
+        if (node.skillIds.length > 0) {
+          await transaction.orm.public.TaskSkill.createAll(
+            node.skillIds.map((skillId) => ({
+              taskId: task.id,
+              skillId,
+            })),
+          );
+        }
+
+        const subtasks: CreatedTaskTreeRecord[] = [];
+        for (const subtask of node.subtasks) {
+          subtasks.push(await createNode(subtask, task.id));
+        }
+
+        return { ...task, subtasks };
       }
 
-      return task;
+      return createNode(input, parentId);
     });
   },
 
