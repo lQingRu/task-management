@@ -19,10 +19,12 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/type-provider-zod": "^1.0.0",
+    "@google/genai": "^2.24.0",
     "@js-temporal/polyfill": "^0.5.1",
     "@prisma/orm-postgres": "^8.0.0-rc.11",
     "dotenv": "^18.0.1",
     "fastify": "^5.12.5",
+    "groq-sdk": "^1.6.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

@@ -81,6 +81,32 @@ describe("POST /v1/tasks", () => {
       message: "The selected developer does not possess all required skills",
     });
   });
+
+  it("returns a service unavailable error when skill inference fails", async () => {
+    const createTask = vi
+      .fn()
+      .mockRejectedValue(
+        new TaskCreationError(
+          "SKILL_INFERENCE_FAILED",
+          "Required skills could not be identified. Please retry later or select skills explicitly.",
+          503,
+        ),
+      );
+    const app = buildApp({ logger: false, services: { createTask } });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/tasks",
+      payload: { title: "Build the API" },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({
+      code: "SKILL_INFERENCE_FAILED",
+      message:
+        "Required skills could not be identified. Please retry later or select skills explicitly.",
+    });
+  });
 });
 
 describe("GET /v1/tasks", () => {

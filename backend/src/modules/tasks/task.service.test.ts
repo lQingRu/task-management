@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TaskRepository } from "./task.repository.js";
 import { createTask, getTasks, updateTask } from "./task.service.js";
+import type { SkillInferenceService } from "./skill-inference/skill-inference.js";
 
 const taskId = "11111111-1111-4111-8111-111111111111";
 const backendSkillId = "22222222-2222-4222-8222-222222222222";
@@ -9,11 +10,20 @@ const frontendSkillId = "33333333-3333-4333-8333-333333333333";
 const developerId = "44444444-4444-4444-8444-444444444444";
 const parentId = "55555555-5555-4555-8555-555555555555";
 
+function createInferenceService(
+  skills: Array<"Frontend" | "Backend"> = ["Backend"],
+): SkillInferenceService {
+  return {
+    inferSkills: vi.fn().mockResolvedValue(skills),
+  };
+}
+
 function createRepository(
   overrides: Partial<TaskRepository> = {},
 ): TaskRepository {
   return {
     findSkillsByIds: vi.fn().mockResolvedValue([]),
+    findSkillsByNames: vi.fn().mockResolvedValue([]),
     findDeveloperById: vi.fn().mockResolvedValue(null),
     taskExists: vi.fn().mockResolvedValue(true),
     create: vi.fn().mockResolvedValue({
@@ -30,30 +40,42 @@ function createRepository(
 }
 
 describe("createTask", () => {
-  it("creates an unassigned task without skills when skillIds is omitted", async () => {
-    const repository = createRepository();
+  it("infers and persists skills when skillIds is omitted", async () => {
+    const repository = createRepository({
+      findSkillsByNames: vi
+        .fn()
+        .mockResolvedValue([{ id: backendSkillId, name: "Backend" }]),
+    });
+    const inferenceService = createInferenceService();
 
-    const task = await createTask({ title: "Build the API" }, repository);
+    const task = await createTask(
+      { title: "Build the API" },
+      repository,
+      inferenceService,
+    );
 
     expect(task).toEqual({
       id: taskId,
       title: "Build the API",
       status: "TODO",
-      skills: [],
+      skills: [{ id: backendSkillId, name: "Backend" }],
       assignee: null,
       parentId: null,
       subtasks: [],
     });
-    expect(repository.findSkillsByIds).toHaveBeenCalledWith([]);
+    expect(inferenceService.inferSkills).toHaveBeenCalledWith("Build the API");
+    expect(repository.findSkillsByNames).toHaveBeenCalledWith(["Backend"]);
+    expect(repository.findSkillsByIds).not.toHaveBeenCalled();
     expect(repository.create).toHaveBeenCalledWith({
       title: "Build the API",
-      skillIds: [],
+      skillIds: [backendSkillId],
       assigneeId: null,
       parentId: null,
     });
   });
 
   it("creates a task when the assignee has every required skill", async () => {
+    const inferenceService = createInferenceService();
     const repository = createRepository({
       findSkillsByIds: vi.fn().mockResolvedValue([
         { id: backendSkillId, name: "Backend" },
@@ -80,6 +102,7 @@ describe("createTask", () => {
         parentId,
       },
       repository,
+      inferenceService,
     );
 
     expect(task.assignee).toEqual({ id: developerId, name: "Carol" });
@@ -94,6 +117,42 @@ describe("createTask", () => {
       assigneeId: developerId,
       parentId,
     });
+    expect(inferenceService.inferSkills).not.toHaveBeenCalled();
+  });
+
+  it("treats an empty skillIds array as requiring inference", async () => {
+    const repository = createRepository({
+      findSkillsByNames: vi
+        .fn()
+        .mockResolvedValue([{ id: frontendSkillId, name: "Frontend" }]),
+    });
+    const inferenceService = createInferenceService(["Frontend"]);
+
+    await createTask(
+      { title: "Build a responsive homepage", skillIds: [] },
+      repository,
+      inferenceService,
+    );
+
+    expect(inferenceService.inferSkills).toHaveBeenCalledOnce();
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ skillIds: [frontendSkillId] }),
+    );
+  });
+
+  it("does not create a task when inference fails", async () => {
+    const repository = createRepository();
+    const inferenceService: SkillInferenceService = {
+      inferSkills: vi.fn().mockRejectedValue(new Error("provider unavailable")),
+    };
+
+    await expect(
+      createTask({ title: "Build the API" }, repository, inferenceService),
+    ).rejects.toMatchObject({
+      code: "SKILL_INFERENCE_FAILED",
+      statusCode: 503,
+    });
+    expect(repository.create).not.toHaveBeenCalled();
   });
 
   it("rejects unknown skill IDs", async () => {

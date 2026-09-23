@@ -50,6 +50,7 @@ export interface TaskChanges {
 
 export interface TaskRepository {
   findSkillsByIds(skillIds: string[]): Promise<SkillRecord[]>;
+  findSkillsByNames(skillNames: string[]): Promise<SkillRecord[]>;
   findDeveloperById(developerId: string): Promise<DeveloperRecord | null>;
   taskExists(taskId: string): Promise<boolean>;
   create(input: NewTaskRecord): Promise<CreatedTaskRecord>;
@@ -69,6 +70,16 @@ export const taskRepository: TaskRepository = {
     }
 
     return db.orm.public.Skill.where((skill) => skill.id.in(skillIds))
+      .select("id", "name")
+      .all();
+  },
+
+  async findSkillsByNames(skillNames) {
+    if (skillNames.length === 0) {
+      return [];
+    }
+
+    return db.orm.public.Skill.where((skill) => skill.name.in(skillNames))
       .select("id", "name")
       .all();
   },
