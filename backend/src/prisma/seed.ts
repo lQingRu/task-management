@@ -65,7 +65,11 @@ async function main() {
   console.log('Database seeded successfully.');
 }
 
-main().catch((error) => {
-  console.error('Failed to seed database:', error);
-  process.exit(1);
-});
+main()
+  .catch((error) => {
+    console.error('Failed to seed database:', error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await db.close();
+  });
