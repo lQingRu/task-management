@@ -1,7 +1,6 @@
 import {
   SkillInferenceError,
   type SkillInferenceService,
-  type SupportedSkillName,
 } from "./skill-inference.js";
 
 export interface SkillInferenceProvider {
@@ -12,7 +11,10 @@ export interface SkillInferenceProvider {
 export class FallbackSkillInferenceService implements SkillInferenceService {
   constructor(private readonly providers: readonly SkillInferenceProvider[]) {}
 
-  async inferSkills(title: string): Promise<SupportedSkillName[]> {
+  async inferSkills(
+    title: string,
+    availableSkillNames: readonly string[],
+  ): Promise<string[]> {
     if (this.providers.length === 0) {
       throw new SkillInferenceError(
         "NOT_CONFIGURED",
@@ -24,7 +26,7 @@ export class FallbackSkillInferenceService implements SkillInferenceService {
 
     for (const provider of this.providers) {
       try {
-        return await provider.service.inferSkills(title);
+        return await provider.service.inferSkills(title, availableSkillNames);
       } catch (error) {
         if (!(error instanceof SkillInferenceError)) {
           throw error;

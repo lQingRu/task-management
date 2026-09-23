@@ -11,6 +11,11 @@ const envSchema = z.object({
   LLM_DEFAULT_RETRY_DELAY_MS: z.coerce.number().int().positive().default(250),
   GROQ_API_KEY: z.string().min(1).optional(),
   GROQ_MODEL: z.string().min(1).default("openai/gpt-oss-20b"),
+  SKILL_INFERENCE_SYSTEM_PROMPT: z.string().min(1).optional(),
+  SKILL_INFERENCE_SYSTEM_PROMPT_FILE: z
+    .string()
+    .min(1)
+    .default("config/skill-inference-system-prompt.txt"),
 });
 
 const runtimeEnvSchema = envSchema

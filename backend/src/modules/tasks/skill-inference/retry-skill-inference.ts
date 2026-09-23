@@ -1,7 +1,4 @@
-import {
-  SkillInferenceError,
-  type SupportedSkillName,
-} from "./skill-inference.js";
+import { SkillInferenceError } from "./skill-inference.js";
 
 interface Logger {
   error(details: unknown, message: string): void;
@@ -19,9 +16,9 @@ export interface SkillInferenceRetryOptions {
 }
 
 export async function retrySkillInference(
-  operation: () => Promise<SupportedSkillName[]>,
+  operation: () => Promise<string[]>,
   options: SkillInferenceRetryOptions,
-): Promise<SupportedSkillName[]> {
+): Promise<string[]> {
   const sleep = options.sleep ?? delay;
   const random = options.random ?? Math.random;
   const logger = options.logger ?? console;

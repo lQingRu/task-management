@@ -13,12 +13,14 @@ function provider(
 }
 
 describe("FallbackSkillInferenceService", () => {
+  const availableSkills = ["Backend", "Frontend"];
+
   it("reports that inference is not configured when no providers are enabled", async () => {
     const service = new FallbackSkillInferenceService([]);
 
-    await expect(service.inferSkills("Build an API")).rejects.toMatchObject({
-      code: "NOT_CONFIGURED",
-    });
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).rejects.toMatchObject({ code: "NOT_CONFIGURED" });
   });
 
   it("returns the primary provider result without calling the fallback", async () => {
@@ -29,9 +31,9 @@ describe("FallbackSkillInferenceService", () => {
       { name: "Groq", service: provider(fallback) },
     ]);
 
-    await expect(service.inferSkills("Build the UI")).resolves.toEqual([
-      "Frontend",
-    ]);
+    await expect(
+      service.inferSkills("Build the UI", availableSkills),
+    ).resolves.toEqual(["Frontend"]);
     expect(primary).toHaveBeenCalledOnce();
     expect(fallback).not.toHaveBeenCalled();
   });
@@ -51,11 +53,11 @@ describe("FallbackSkillInferenceService", () => {
       { name: "Gemini", service: provider(fallback) },
     ]);
 
-    await expect(service.inferSkills("Build an API")).resolves.toEqual([
-      "Backend",
-    ]);
-    expect(primary).toHaveBeenCalledWith("Build an API");
-    expect(fallback).toHaveBeenCalledWith("Build an API");
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).resolves.toEqual(["Backend"]);
+    expect(primary).toHaveBeenCalledWith("Build an API", availableSkills);
+    expect(fallback).toHaveBeenCalledWith("Build an API", availableSkills);
     expect(primary.mock.invocationCallOrder[0]).toBeLessThan(
       fallback.mock.invocationCallOrder[0]!,
     );
@@ -88,7 +90,9 @@ describe("FallbackSkillInferenceService", () => {
       },
     ]);
 
-    await expect(service.inferSkills("Build an API")).rejects.toMatchObject({
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).rejects.toMatchObject({
       code: "PROVIDER_UNAVAILABLE",
       message: "All skill inference providers failed: Groq, Gemini",
     });
@@ -104,7 +108,9 @@ describe("FallbackSkillInferenceService", () => {
       { name: "Gemini", service: provider(fallback) },
     ]);
 
-    await expect(service.inferSkills("Build an API")).rejects.toThrow("bug");
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).rejects.toThrow("bug");
     expect(fallback).not.toHaveBeenCalled();
   });
 });

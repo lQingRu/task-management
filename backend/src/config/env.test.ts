@@ -11,6 +11,8 @@ describe("environment configuration", () => {
       LLM_MAX_ATTEMPTS: 2,
       LLM_DEFAULT_RETRY_DELAY_MS: 250,
       GROQ_MODEL: "openai/gpt-oss-20b",
+      SKILL_INFERENCE_SYSTEM_PROMPT_FILE:
+        "config/skill-inference-system-prompt.txt",
     });
   });
 

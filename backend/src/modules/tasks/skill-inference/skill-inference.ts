@@ -1,55 +1,25 @@
-import { z } from 'zod';
-
-export const SUPPORTED_SKILL_NAMES = ['Frontend', 'Backend'] as const;
-
-export const SUPPORTED_SKILL_DESCRIPTIONS: Record<
-  (typeof SUPPORTED_SKILL_NAMES)[number],
-  string
-> = {
-  Frontend:
-    'browser UI, styling, accessibility, client-side interactions, or frontend application code',
-  Backend:
-    'APIs, databases, server-side logic, integrations, infrastructure, or backend application code',
-};
-
-export const supportedSkillNameSchema = z.enum(SUPPORTED_SKILL_NAMES);
+import { z } from "zod";
 
 export const skillInferenceResultSchema = z
   .object({
-    skills: z.array(supportedSkillNameSchema).min(0).max(2),
+    skills: z.array(z.string().trim().min(1)),
   })
   .strict();
 
-export const SKILL_INFERENCE_JSON_SCHEMA = {
-  type: 'object',
-  properties: {
-    skills: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: [...SUPPORTED_SKILL_NAMES],
-      },
-      minItems: 0,
-      maxItems: SUPPORTED_SKILL_NAMES.length,
-    },
-  },
-  required: ['skills'],
-  additionalProperties: false,
-} as const;
-
-export type SupportedSkillName = z.infer<typeof supportedSkillNameSchema>;
-
 export interface SkillInferenceService {
-  inferSkills(title: string): Promise<SupportedSkillName[]>;
+  inferSkills(
+    title: string,
+    availableSkillNames: readonly string[],
+  ): Promise<string[]>;
 }
 
 export type SkillInferenceErrorCode =
-  | 'NOT_CONFIGURED'
-  | 'TIMEOUT'
-  | 'RATE_LIMITED'
-  | 'PROVIDER_REJECTED'
-  | 'PROVIDER_UNAVAILABLE'
-  | 'INVALID_RESPONSE';
+  | "NOT_CONFIGURED"
+  | "TIMEOUT"
+  | "RATE_LIMITED"
+  | "PROVIDER_REJECTED"
+  | "PROVIDER_UNAVAILABLE"
+  | "INVALID_RESPONSE";
 
 export class SkillInferenceError extends Error {
   constructor(
@@ -58,17 +28,39 @@ export class SkillInferenceError extends Error {
     options?: ErrorOptions,
   ) {
     super(message, options);
-    this.name = 'SkillInferenceError';
+    this.name = "SkillInferenceError";
   }
+}
+
+export function buildSkillInferenceJsonSchema(
+  availableSkillNames: readonly string[],
+) {
+  return {
+    type: "object",
+    properties: {
+      skills: {
+        type: "array",
+        items: {
+          type: "string",
+          enum: [...availableSkillNames],
+        },
+        minItems: 0,
+        maxItems: availableSkillNames.length,
+      },
+    },
+    required: ["skills"],
+    additionalProperties: false,
+  } as const;
 }
 
 export function parseSkillInferenceOutput(
   text: string | null | undefined,
   provider: string,
-): SupportedSkillName[] {
+  availableSkillNames: readonly string[],
+): string[] {
   if (!text) {
     throw new SkillInferenceError(
-      'INVALID_RESPONSE',
+      "INVALID_RESPONSE",
       `${provider} returned no structured output`,
     );
   }
@@ -78,16 +70,21 @@ export function parseSkillInferenceOutput(
     parsed = JSON.parse(text);
   } catch (error) {
     throw new SkillInferenceError(
-      'INVALID_RESPONSE',
+      "INVALID_RESPONSE",
       `${provider} returned invalid JSON`,
       { cause: error },
     );
   }
 
   const result = skillInferenceResultSchema.safeParse(parsed);
-  if (!result.success) {
+  const availableSkillNameSet = new Set(availableSkillNames);
+  if (
+    !result.success ||
+    result.data.skills.length > availableSkillNames.length ||
+    result.data.skills.some((name) => !availableSkillNameSet.has(name))
+  ) {
     throw new SkillInferenceError(
-      'INVALID_RESPONSE',
+      "INVALID_RESPONSE",
       `${provider} returned unsupported skills`,
       { cause: result.error },
     );

@@ -33,6 +33,8 @@ function createService(
 }
 
 describe("GroqSkillInferenceService", () => {
+  const availableSkills = ["Backend", "Frontend", "DevOps"];
+
   it("requests strict structured output and validates supported skills", async () => {
     const create = vi
       .fn<CreateCompletion>()
@@ -40,7 +42,7 @@ describe("GroqSkillInferenceService", () => {
     const service = createService(create);
 
     await expect(
-      service.inferSkills("Build a full-stack dashboard"),
+      service.inferSkills("Build a full-stack dashboard", availableSkills),
     ).resolves.toEqual(["Frontend", "Backend"]);
 
     expect(create).toHaveBeenCalledOnce();
@@ -60,6 +62,11 @@ describe("GroqSkillInferenceService", () => {
             schema: expect.objectContaining({
               required: ["skills"],
               additionalProperties: false,
+              properties: expect.objectContaining({
+                skills: expect.objectContaining({
+                  items: expect.objectContaining({ enum: availableSkills }),
+                }),
+              }),
             }),
           }),
         },
@@ -87,9 +94,9 @@ describe("GroqSkillInferenceService", () => {
       random: () => 0.5,
     });
 
-    await expect(service.inferSkills("Build an API")).resolves.toEqual([
-      "Backend",
-    ]);
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).resolves.toEqual(["Backend"]);
     expect(create).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledWith(250);
   });
@@ -108,7 +115,9 @@ describe("GroqSkillInferenceService", () => {
     const sleep = vi.fn();
     const service = createService(create, { maxAttempts: 2, sleep });
 
-    await expect(service.inferSkills("Build an API")).rejects.toMatchObject({
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).rejects.toMatchObject({
       code: "PROVIDER_REJECTED",
       message: expect.stringContaining("Invalid schema"),
     });

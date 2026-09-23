@@ -1,20 +1,23 @@
-import {
-  SUPPORTED_SKILL_DESCRIPTIONS,
-  SUPPORTED_SKILL_NAMES,
-} from './skill-inference.js';
+import { readFileSync } from "node:fs";
 
-const skillDescriptions = SUPPORTED_SKILL_NAMES.map(
-  (name) => `- ${name}: ${SUPPORTED_SKILL_DESCRIPTIONS[name]}.`,
-).join('\n');
+import { env } from "../../../config/env.js";
 
-export const SKILL_INFERENCE_SYSTEM_PROMPT = `You classify the skills required to complete a task based on its title.
+const AVAILABLE_SKILLS_TOKEN = "{{AVAILABLE_SKILLS}}";
 
-Allowed skills:
-${skillDescriptions}
+export function buildSkillInferenceSystemPrompt(
+  availableSkillNames: readonly string[],
+): string {
+  const skillList = availableSkillNames.map((name) => `- ${name}`).join("\n");
 
-Rules:
-- Select only skills clearly relevant to the task title.
-- Do not guess or select the closest match.
-- If the title is vague, unrelated, or meaningless, return no skills.
-- Only select from the allowed skills.
-`;
+  const template =
+    env.SKILL_INFERENCE_SYSTEM_PROMPT ??
+    readFileSync(env.SKILL_INFERENCE_SYSTEM_PROMPT_FILE, "utf8");
+
+  if (!template.includes(AVAILABLE_SKILLS_TOKEN)) {
+    throw new Error(
+      `Skill inference prompt must contain ${AVAILABLE_SKILLS_TOKEN}`,
+    );
+  }
+
+  return template.replaceAll(AVAILABLE_SKILLS_TOKEN, skillList);
+}

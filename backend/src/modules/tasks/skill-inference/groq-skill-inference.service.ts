@@ -1,13 +1,12 @@
 import { APIConnectionTimeoutError, APIError } from "groq-sdk";
 
 import {
-  SKILL_INFERENCE_JSON_SCHEMA,
   SkillInferenceError,
+  buildSkillInferenceJsonSchema,
   parseSkillInferenceOutput,
   type SkillInferenceService,
-  type SupportedSkillName,
 } from "./skill-inference.js";
-import { SKILL_INFERENCE_SYSTEM_PROMPT } from "./skill-inference.prompt.js";
+import { buildSkillInferenceSystemPrompt } from "./skill-inference.prompt.js";
 import { retrySkillInference } from "./retry-skill-inference.js";
 
 interface GroqCompletionRequest {
@@ -82,7 +81,10 @@ export class GroqSkillInferenceService implements SkillInferenceService {
     this.logger = options.logger ?? console;
   }
 
-  async inferSkills(title: string): Promise<SupportedSkillName[]> {
+  async inferSkills(
+    title: string,
+    availableSkillNames: readonly string[],
+  ): Promise<string[]> {
     const client = this.client;
     if (!this.apiKey || !client) {
       const error = new SkillInferenceError(
@@ -93,22 +95,26 @@ export class GroqSkillInferenceService implements SkillInferenceService {
       throw error;
     }
 
-    return retrySkillInference(() => this.requestInference(title, client), {
-      provider: "Groq",
-      model: this.model,
-      maxAttempts: this.maxAttempts,
-      retryDelayMs: this.retryDelayMs,
-      normalizeError,
-      sleep: this.sleep,
-      random: this.random,
-      logger: this.logger,
-    });
+    return retrySkillInference(
+      () => this.requestInference(title, availableSkillNames, client),
+      {
+        provider: "Groq",
+        model: this.model,
+        maxAttempts: this.maxAttempts,
+        retryDelayMs: this.retryDelayMs,
+        normalizeError,
+        sleep: this.sleep,
+        random: this.random,
+        logger: this.logger,
+      },
+    );
   }
 
   private async requestInference(
     title: string,
+    availableSkillNames: readonly string[],
     client: GroqClient,
-  ): Promise<SupportedSkillName[]> {
+  ): Promise<string[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -117,7 +123,10 @@ export class GroqSkillInferenceService implements SkillInferenceService {
         {
           model: this.model,
           messages: [
-            { role: "system", content: SKILL_INFERENCE_SYSTEM_PROMPT },
+            {
+              role: "system",
+              content: buildSkillInferenceSystemPrompt(availableSkillNames),
+            },
             { role: "user", content: title },
           ],
           temperature: 0,
@@ -127,7 +136,7 @@ export class GroqSkillInferenceService implements SkillInferenceService {
             json_schema: {
               name: "skill_inference",
               strict: true,
-              schema: SKILL_INFERENCE_JSON_SCHEMA,
+              schema: buildSkillInferenceJsonSchema(availableSkillNames),
             },
           },
         },
@@ -137,6 +146,7 @@ export class GroqSkillInferenceService implements SkillInferenceService {
       return parseSkillInferenceOutput(
         response.choices[0]?.message.content,
         "Groq",
+        availableSkillNames,
       );
     } catch (error) {
       if (controller.signal.aborted) {

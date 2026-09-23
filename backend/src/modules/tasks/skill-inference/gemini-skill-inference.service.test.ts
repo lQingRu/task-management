@@ -17,6 +17,8 @@ function createClient(generateContent: GenerateContent): GeminiClient {
 }
 
 describe("GeminiSkillInferenceService", () => {
+  const availableSkills = ["Backend", "Frontend", "DevOps"];
+
   it("requests structured output and returns validated supported skills", async () => {
     const generateContent = vi
       .fn<GenerateContent>()
@@ -32,7 +34,7 @@ describe("GeminiSkillInferenceService", () => {
     });
 
     await expect(
-      service.inferSkills("Build a full-stack dashboard"),
+      service.inferSkills("Build a full-stack dashboard", availableSkills),
     ).resolves.toEqual(["Frontend", "Backend"]);
 
     expect(generateContent).toHaveBeenCalledOnce();
@@ -47,7 +49,7 @@ describe("GeminiSkillInferenceService", () => {
             properties: expect.objectContaining({
               skills: expect.objectContaining({
                 items: expect.objectContaining({
-                  enum: ["Frontend", "Backend"],
+                  enum: availableSkills,
                 }),
               }),
             }),
@@ -72,7 +74,7 @@ describe("GeminiSkillInferenceService", () => {
     });
 
     await expect(
-      service.inferSkills("Deploy the service"),
+      service.inferSkills("Deploy the service", ["Frontend", "Backend"]),
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     expect(logger.error).toHaveBeenCalledOnce();
   });
@@ -97,9 +99,9 @@ describe("GeminiSkillInferenceService", () => {
       logger: { error: vi.fn() },
     });
 
-    await expect(service.inferSkills("Build an API")).resolves.toEqual([
-      "Backend",
-    ]);
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).resolves.toEqual(["Backend"]);
     expect(generateContent).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledWith(250);
   });
@@ -122,7 +124,9 @@ describe("GeminiSkillInferenceService", () => {
       logger: { error: vi.fn() },
     });
 
-    await expect(service.inferSkills("Build an API")).rejects.toMatchObject({
+    await expect(
+      service.inferSkills("Build an API", availableSkills),
+    ).rejects.toMatchObject({
       code: "PROVIDER_REJECTED",
       message: expect.stringContaining("Invalid request schema"),
     });
