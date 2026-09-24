@@ -43,7 +43,7 @@ The prompt must contain `{{AVAILABLE_SKILLS}}`; the API replaces that token with
 
    Compose starts PostgreSQL, applies migrations, seeds sample data, and then starts the API and frontend. Open `http://localhost:3000`; the API is available at `http://localhost:3001`.
 
-4. Stop the services with `Ctrl+C`, then run `docker compose down`.
+4. Stop the services with `Ctrl+C`, then run `docker compose down`. Run `docker compose down -v` to remove the data.
 
 ### Locally
 
