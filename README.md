@@ -129,7 +129,7 @@ The Prisma contract artifacts (`contract.json` and `contract.d.ts`) are generate
 
 ## Notes
 
-- Requirements (plans/requirements.md) — Summarizes the requirements, assumptions, and decisions
-- Figma design (plans/figma_design.html) — Shows the planned Task Workspace interface
-- Design considerations (plans/design-considerations.md) — Covers key design choices, including LLM skill inference
-- System design (plans/system-design.md) — Describes the architecture, data model, APIs, and key technical decisions
+- [Requirements](plans/requirements.md) — Summarizes the requirements, assumptions, and decisions
+- [Figma design](plans/figma_design.html) — Shows the planned Task Workspace interface
+- [Design considerations](plans/design-considerations.md) — Covers key design choices, including LLM skill inference
+- [System design](/plans/system-design.md) — Describes the architecture, data model, APIs, and key technical decisions
