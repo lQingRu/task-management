@@ -13,7 +13,7 @@ A Task minimally contains:
 - `id`
 - `title`
 - `status`
-- required `skills`
+- `skills`
 - `assignee`
 - `subtasks`
 
@@ -63,7 +63,7 @@ Relevant properties include:
 
 - title
 - status
-- required Skills
+- skills
 - assignee
 - subtasks
 
@@ -98,7 +98,7 @@ Frontend validation may prevent invalid choices for better UX, but backend valid
 ### Good-to-Have
 
 - Edit title.
-- Edit required Skills.
+- Edit required skills.
 
 These are useful CRUD capabilities but are not explicitly required by the assessment.
 
@@ -119,8 +119,6 @@ If deletion is later supported:
 - deletion semantics must define what happens to subtasks
 - soft-delete versus hard-delete should be considered
 - referential integrity with assignments and Skills should be preserved
-
-I would **not add hard-delete now** just because CRUD commonly includes it.
 
 ---
 
